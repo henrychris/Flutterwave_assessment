@@ -1,3 +1,5 @@
+require ('newrelic');
+
 var express = require('express');
 const bodyParser = require("body-parser");
 const computeController = require("./controllers/computeController");
