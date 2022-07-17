@@ -5,6 +5,7 @@ const computeController = require("./controllers/computeController");
 var app = express();
 app.use(bodyParser.json());
 
+app.get('/', (req, res) => { res.send("Hello World!") });
 app.post('/split-payments/compute', computeController.compute)
 
 var server = app.listen(8080, function () {
