@@ -11,6 +11,7 @@
   },
   "devDependencies": {},
   "scripts": {
+    "start": "main.js",
     "dev": "nodemon main.js"
   },
   "author": "henrychris",
