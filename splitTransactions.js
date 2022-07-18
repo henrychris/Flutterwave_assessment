@@ -1,4 +1,6 @@
-var timsort = require("timsort");
+const timsort = require("timsort");
+const classes = require("./classes")
+
 
 // global variables
 let balance = 0;
@@ -7,11 +9,10 @@ ratioSplitArray = new Array();
 splitBreakdownArray = new Array();
 
 
-const classes = require("./classes")
-
 TransactionObj = classes.TransactionObj
 splitEntityObj = classes.splitEntityObj
 
+// sorts the split info array by type of transaction split
 function compareSplitType(a, b) {
     if (a.SplitType < b.SplitType) {
         return -1;
@@ -22,41 +23,48 @@ function compareSplitType(a, b) {
     return 0;
 }
 
+
+// computes the amount for each transaction split
 const computeSplits = function (transaction) {
     balance = transaction.amount;
     timsort.sort(transaction.splitInfo, compareSplitType);
 
     transaction.splitInfo.forEach(element => {
         if (element.SplitType == "FLAT") {
-            balance = computeFlat(element, balance);
+            balance = ComputeAmountForFlatSplit(element, balance);
         }
         if (element.SplitType == "RATIO") {
             computeTotalRatio(element);
             ratioSplitArray.push(element);
         }
         if (element.SplitType == "PERCENTAGE") {
-            balance = computePercentage(element, balance);
+            balance = ComputeAmountForPercentageSplit(element, balance);
         }
     });
 
+    // ratio is computed separately because its calculated differently
     if (ratioSplitArray.length > 0) {
         ratioSplitArray.forEach(element => {
-            computeRatio(element, balance)
+            ComputeAmountForRatioSplit(element, balance)
         })
     }
 }
 
-const computeFlat = function (splitEntityObj, balance) {
+
+const ComputeAmountForFlatSplit = function (splitEntityObj, balance) {
     endBalance = balance - splitEntityObj.SplitValue;
     splitBreakdownArray.push(new classes.splitBreakdownObj(splitEntityObj.SplitEntityId, splitEntityObj.SplitValue));
     return endBalance;
 }
 
+// ratio splits are calculated like so:
+// ( split value / total ratio ) * balance
+// this function sums the split values to get a total ratio 
 const computeTotalRatio = function (splitEntityObj) {
     totalRatio = totalRatio + splitEntityObj.SplitValue;
 }
 
-const computePercentage = function (splitEntityObj, balance) {
+const ComputeAmountForPercentageSplit = function (splitEntityObj, balance) {
     endBalance = balance - ((splitEntityObj.SplitValue / 100) * balance);
     splitamt = balance - endBalance
 
@@ -66,11 +74,9 @@ const computePercentage = function (splitEntityObj, balance) {
 
 
 let ratioBreakdownArray = new Array();
-ratioBreakdownArray.splice(0);
-
 let totalRatioSplitAmount = 0;
 
-const computeRatio = function (element, balance) {
+const ComputeAmountForRatioSplit = function (element, balance) {
     splitAmount = (element.SplitValue / totalRatio) * balance
 
     temp = new classes.splitBreakdownObj("", 0);
@@ -79,14 +85,18 @@ const computeRatio = function (element, balance) {
     temp.SplitEntityId = element.SplitEntityId
 
     totalRatioSplitAmount += splitAmount;
+
+    // this array stores the individual ratio split payments 
     ratioBreakdownArray.push(temp);
 }
 
+// creates the json object to be sent as response from the API
 const createSplitBreakdown = function (transaction) {
     balance -= totalRatioSplitAmount;
 
     breakdown = new classes.splitResult(transaction.id, balance, splitBreakdownArray);
 
+    // values are reset to prevent errors in subsequent requests
     splitBreakdownArray = [];
     ratioSplitArray = [];
     balance = 0;
@@ -103,8 +113,8 @@ const createSplitBreakdown = function (transaction) {
 
 module.exports = {
     computeSplits,
-    computeFlat,
-    computeRatio,
-    computePercentage,
+    computeFlat: ComputeAmountForFlatSplit,
+    computeRatio: ComputeAmountForRatioSplit,
+    computePercentage: ComputeAmountForPercentageSplit,
     createSplitBreakdown
 }

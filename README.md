@@ -1,0 +1,1 @@
+The application responds well below 80ms when run locally. However, when hosted latency issues cause performance to suffer massively.
